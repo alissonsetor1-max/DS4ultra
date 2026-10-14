@@ -1008,7 +1008,7 @@
         button: 'up',
         cooldown: 800
       },
-      profiles: JSON.parse(localStorage.getItem('ds4_profiles') || '{}'),
+      profiles: (() => { try { return JSON.parse(localStorage.getItem('ds4_profiles') || '{}'); } catch (e) { return {}; } })(),
       currentProfile: null,
       mappingTarget: null
     };
@@ -1140,7 +1140,7 @@
         ping: { ...state.ping },
         savedAt: new Date().toISOString()
       };
-      localStorage.setItem('ds4_profiles', JSON.stringify(state.profiles));
+      safeSet('ds4_profiles', JSON.stringify(state.profiles));
       renderProfiles();
     }
 
@@ -1209,7 +1209,7 @@
         btn.addEventListener('click', () => {
           if (confirm(`Excluir perfil "${btn.dataset.del}"?`)) {
             delete state.profiles[btn.dataset.del];
-            localStorage.setItem('ds4_profiles', JSON.stringify(state.profiles));
+            safeSet('ds4_profiles', JSON.stringify(state.profiles));
             if (state.currentProfile === btn.dataset.del) state.currentProfile = null;
             renderProfiles();
           }
@@ -1397,7 +1397,7 @@
       if (!name) return alert('Digite um nome para o perfil');
       saveCurrentToProfile(name);
       $('#profileName').value = '';
-      alert('Perfil salvo!');
+      alert(storageOk ? 'Perfil salvo!' : 'Não foi possível salvar: o navegador bloqueou o armazenamento local. Abra o index.html direto no navegador (fora de preview) ou use Exportar.');
     });
 
     $('#btnExport').addEventListener('click', () => {
@@ -1448,7 +1448,8 @@
           $('#pingCooldown').value = state.ping.cooldown;
           updateRangeDisplays();
           renderMappingList();
-          alert('Perfil importado com sucesso!');
+          autosave();
+          alert('Perfil importado com sucesso!' + (storageOk ? '' : ' (aviso: o navegador bloqueou o armazenamento local; abra o arquivo fora de um preview para salvar)'));
         } catch (err) {
           alert('Erro ao importar arquivo');
         }
@@ -1475,10 +1476,61 @@
       }
     });
 
+    // ===================== PERSISTÊNCIA =====================
+    let storageOk = true;
+    function safeSet(key, value) {
+      try { localStorage.setItem(key, value); return true; }
+      catch (e) { storageOk = false; return false; }
+    }
+    function snapshot() {
+      return { mappings: state.mappings, deadzones: state.deadzones, recoil: state.recoil, aim: state.aim, ping: state.ping };
+    }
+    function syncUI() {
+      $('#dzLeft').value = state.deadzones.left;
+      $('#dzRight').value = state.deadzones.right;
+      $('#dzL2').value = state.deadzones.l2;
+      $('#dzR2').value = state.deadzones.r2;
+      $('#antiDz').value = state.deadzones.anti;
+      $('#recoilEnabled').checked = state.recoil.enabled;
+      $('#recoilV').value = state.recoil.vertical;
+      $('#recoilH').value = state.recoil.horizontal;
+      $('#recoilDelay').value = state.recoil.delay;
+      $('#recoilTrigger').value = state.recoil.trigger;
+      $('#aimEnabled').checked = state.aim.enabled;
+      $('#aimStrength').value = state.aim.strength;
+      $('#aimSmooth').value = state.aim.smooth;
+      $('#aimFov').value = state.aim.fov;
+      $('#pingEnabled').checked = state.ping.enabled;
+      $('#pingButton').value = state.ping.button;
+      $('#pingCooldown').value = state.ping.cooldown;
+      updateRangeDisplays();
+      renderMappingList();
+    }
+    function autosave() { safeSet('ds4_current', JSON.stringify(snapshot())); }
+    function restoreCurrent() {
+      try {
+        const raw = localStorage.getItem('ds4_current');
+        if (!raw) return;
+        const d = JSON.parse(raw);
+        if (d.mappings) state.mappings = d.mappings;
+        if (d.deadzones) Object.assign(state.deadzones, d.deadzones);
+        if (d.recoil) Object.assign(state.recoil, d.recoil);
+        if (d.aim) Object.assign(state.aim, d.aim);
+        if (d.ping) Object.assign(state.ping, d.ping);
+        syncUI();
+      } catch (e) {}
+    }
+    let saveTimer = null;
+    ['input', 'change', 'click'].forEach(ev => document.addEventListener(ev, () => {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(autosave, 150);
+    }));
+
     // Init
     renderMappingList();
     renderProfiles();
     updateRangeDisplays();
+    restoreCurrent();
     updateGamepad();
   </script>
 </body>
