@@ -940,7 +940,7 @@
             <button class="btn btn-secondary" id="btnExport">Exportar JSON</button>
             <button class="btn btn-secondary" id="btnImport">Importar</button>
             <button class="btn btn-primary" id="btnDownloadHtml">Baixar HTML com esta configuração</button>
-            <input type="file" id="importFile" accept=".json" style="display:none">
+            <input type="file" id="importFile" accept=".json,.rewasd" style="display:none">
           </div>
 
           <div style="margin-top: 24px;">
@@ -1457,37 +1457,12 @@
       const reader = new FileReader();
       reader.onload = ev => {
         try {
-          const data = JSON.parse(ev.target.result);
-          if (data.mappings) state.mappings = data.mappings;
-          if (data.deadzones) state.deadzones = data.deadzones;
-          if (data.recoil) state.recoil = data.recoil;
-          if (data.aim) state.aim = data.aim;
-          if (data.ping) state.ping = data.ping;
-          // sync UI
-          $('#dzLeft').value = state.deadzones.left;
-          $('#dzRight').value = state.deadzones.right;
-          $('#dzL2').value = state.deadzones.l2;
-          $('#dzR2').value = state.deadzones.r2;
-          $('#antiDz').value = state.deadzones.anti;
-          $('#recoilEnabled').checked = state.recoil.enabled;
-          $('#recoilV').value = state.recoil.vertical;
-          $('#recoilH').value = state.recoil.horizontal;
-          $('#recoilDelay').value = state.recoil.delay;
-          $('#recoilTrigger').value = state.recoil.trigger;
-          $('#aimEnabled').checked = state.aim.enabled;
-          $('#aimStrength').value = state.aim.strength;
-          $('#aimSmooth').value = state.aim.smooth;
-          $('#aimFov').value = state.aim.fov;
-          $('#pingEnabled').checked = state.ping.enabled;
-          $('#pingButton').value = state.ping.button;
-          $('#pingCooldown').value = state.ping.cooldown;
-          updateRangeDisplays();
-          renderMappingList();
-          autosave();
-          alert('Perfil importado com sucesso!' + (storageOk ? '' : ' (aviso: o navegador bloqueou o armazenamento local; abra o arquivo fora de um preview para salvar)'));
+          const summary = importData(ev.target.result);
+          alert('Importado com sucesso!\n' + summary + (storageOk ? '' : '\n\nAviso: o navegador bloqueou o armazenamento local. Use "Baixar HTML com esta configuração" para gravar na página.'));
         } catch (err) {
-          alert('Erro ao importar arquivo');
+          alert('Erro ao importar: ' + err.message);
         }
+        e.target.value = '';
       };
       reader.readAsText(file);
     });
@@ -1587,6 +1562,54 @@
       clearTimeout(saveTimer);
       saveTimer = setTimeout(autosave, 150);
     }));
+
+    // ===================== IMPORTAÇÃO (formato da página + reWASD) =====================
+    const REWASD_BTN = {1:'cross',2:'circle',3:'square',4:'triangle',5:'l1',6:'r1',7:'share',8:'options',9:'l3',10:'r3',33:'dpad-up',34:'dpad-down',35:'dpad-left',36:'dpad-right',51:'l2',55:'r2'};
+    const REWASD_KEY = {DIK_LMENU:'key-alt',DIK_F:'key-f',DIK_Q:'key-q',DIK_M:'key-m',DIK_ESCAPE:'key-esc',DIK_LSHIFT:'key-shift',DIK_G:'key-g',DIK_UP:'key-up',DIK_DOWN:'key-down',DIK_LEFT:'key-left',DIK_RIGHT:'key-right',DIK_W:'key-w',DIK_A:'key-a',DIK_S:'key-s',DIK_D:'key-d',DIK_E:'key-e',DIK_R:'key-r',DIK_C:'key-c',DIK_V:'key-v',DIK_TAB:'key-tab',DIK_SPACE:'key-space',DIK_LCONTROL:'key-ctrl',DIK_1:'key-1',DIK_2:'key-2',DIK_3:'key-3',DIK_4:'key-4'};
+    const REWASD_MOUSE = {1:'mouse-left',2:'mouse-right',3:'mouse-middle',4:'mouse-side1',5:'mouse-side2'};
+
+    function convertRewasd(cfg) {
+      const masks = {};
+      (cfg.masks || []).forEach(m => masks[m.id] = m);
+      const mappings = {};
+      (cfg.mappings || []).forEach(mp => {
+        const c = mp.condition || {};
+        if (!c.mask || c.shiftId !== undefined) return;           // só a camada principal
+        const set = (masks[c.mask.id] || {}).set || [];
+        if (set.length !== 1 || set[0].deviceId !== 1) return;     // só botões do gamepad
+        const btn = REWASD_BTN[set[0].buttonId];
+        const macros = mp.macros || [];
+        if (!btn || macros.length !== 1) return;
+        const kind = Object.keys(macros[0])[0], v = macros[0][kind];
+        let act = null;
+        if (kind === 'keyboard') act = REWASD_KEY[v.description];
+        else if (kind === 'mouse') {
+          if (v && v.buttonId) act = REWASD_MOUSE[v.buttonId];
+          else if (v && v.wheel === 'down') act = 'wheel-down';
+        }
+        if (act) mappings[btn] = act;
+      });
+      return { mappings };
+    }
+
+    function importData(text) {
+      const data = JSON.parse(text.replace(/^\uFEFF/, ''));
+      let src = data, origem = 'formato da página';
+      if (Array.isArray(data.mappings) && data.masks) {            // arquivo reWASD (.rewasd / .json convertido)
+        src = convertRewasd(data); origem = 'reWASD';
+      } else if (!data.mappings || Array.isArray(data.mappings)) {
+        throw new Error('arquivo não reconhecido (sem "mappings" válidos)');
+      }
+      state.currentProfile = null;
+      applyData(src);
+      autosave();
+      renderProfiles();
+      const n = Object.keys(state.mappings).length;
+      const d = state.deadzones;
+      return 'Origem: ' + origem + '\nBotões mapeados: ' + n +
+        '\nDeadzones: L ' + d.left + ' | R ' + d.right + ' | L2 ' + d.l2 + ' | R2 ' + d.r2 +
+        (origem === 'reWASD' ? '\n(o reWASD não traz deadzone/recoil/aim/ping nesse formato; ficaram os valores atuais)' : '');
+    }
 
     // Init
     renderMappingList();
