@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS4 Custom System</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --bg-card: #1a1d24;
+      --bg-hover: #252a34;
+      --border: #2d3340;
+      --text: #e8eaed;
+      --text-muted: #9aa0a6;
+      --accent: #00d4aa;
+      --accent-dim: #00a88a;
+      --danger: #ff5c5c;
+      --warning: #ffb84d;
+      --blue: #4da6ff;
+      --purple: #a78bfa;
+      --radius: 12px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* Header */
+    header {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--blue));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--danger);
+      transition: background 0.3s;
+    }
+
+    .status-dot.connected {
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    /* Layout */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 1100px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+    }
+
+    .card-title span {
+      color: var(--text-muted);
+      font-weight: 400;
+      font-size: 0.85rem;
+    }
+
+    /* Controller Visual */
+    .controller-card {
+      position: sticky;
+      top: 80px;
+    }
+
+    .controller-svg {
+      width: 100%;
+      max-width: 380px;
+      margin: 0 auto;
+      display: block;
+    }
+
+    .btn-visual {
+      fill: #2a2f3a;
+      stroke: #3d4452;
+      stroke-width: 1.5;
+      cursor: pointer;
+      transition: fill 0.15s, stroke 0.15s;
+    }
+
+    .btn-visual:hover {
+      fill: #3a4150;
+    }
+
+    .btn-visual.active {
+      fill: var(--accent);
+      stroke: var(--accent-dim);
+    }
+
+    .btn-visual.mapped {
+      stroke: var(--blue);
+      stroke-width: 2.5;
+    }
+
+    .stick-base {
+      fill: #1e222b;
+      stroke: #3d4452;
+      stroke-width: 2;
+    }
+
+    .stick-knob {
+      fill: #4a5160;
+      transition: transform 0.05s linear;
+    }
+
+    .trigger-bar {
+      fill: #2a2f3a;
+      rx: 4;
+    }
+
+    .trigger-fill {
+      fill: var(--accent);
+      transition: height 0.05s;
+    }
+
+    .touchpad {
+      fill: #252a34;
+      stroke: #3d4452;
+      stroke-width: 1.5;
+    }
+
+    .touchpad.active {
+      fill: var(--blue);
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg);
+      padding: 4px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 500;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab:hover {
+      color: var(--text);
+      background: var(--bg-hover);
+    }
+
+    .tab.active {
+      background: var(--bg-card);
+      color: var(--accent);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Form elements */
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .form-row .form-group {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      background: var(--border);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(0,212,170,0.4);
+    }
+
+    .range-value {
+      font-size: 0.85rem;
+      color: var(--accent);
+      font-weight: 600;
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .range-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    select, input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    select:focus, input[type="text"]:focus, input[type="number"]:focus {
+      border-color: var(--accent);
+    }
+
+    /* Toggle */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .toggle-row:last-child {
+      border-bottom: none;
+    }
+
+    .toggle-label {
+      font-size: 0.95rem;
+    }
+
+    .toggle-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .toggle {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: var(--border);
+      border-radius: 26px;
+      transition: 0.25s;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: 0.25s;
+    }
+
+    .toggle input:checked + .toggle-slider {
+      background: var(--accent);
+    }
+
+    .toggle input:checked + .toggle-slider:before {
+      transform: translateX(22px);
+    }
+
+    /* Mapping list */
+    .mapping-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 420px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .mapping-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .mapping-item:hover {
+      border-color: var(--accent);
+      background: var(--bg-hover);
+    }
+
+    .mapping-item .btn-name {
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .mapping-item .btn-action {
+      font-size: 0.8rem;
+      color: var(--blue);
+      background: rgba(77,166,255,0.12);
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0f1115;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-dim);
+    }
+
+    .btn-secondary {
+      background: var(--bg-hover);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--text-muted);
+    }
+
+    .btn-danger {
+      background: rgba(255,92,92,0.15);
+      color: var(--danger);
+      border: 1px solid rgba(255,92,92,0.3);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    /* Profile list */
+    .profile-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .profile-item.active {
+      border-color: var(--accent);
+      background: rgba(0,212,170,0.08);
+    }
+
+    .profile-name {
+      font-weight: 500;
+    }
+
+    .profile-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: var(--bg-hover);
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .icon-btn:hover {
+      color: var(--text);
+      background: var(--border);
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      width: 90%;
+      max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .modal h3 {
+      margin-bottom: 16px;
+      font-size: 1.1rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+
+    /* Info banner */
+    .info-banner {
+      background: rgba(77,166,255,0.1);
+      border: 1px solid rgba(77,166,255,0.25);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      color: var(--blue);
+      margin-bottom: 16px;
+      line-height: 1.45;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    /* Live values */
+    .live-values {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .live-item {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .live-item .label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .live-item .value {
+      font-size: 1.1rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🎮</div>
+      <span>DS4 Custom System</span>
+    </div>
+    <div class="status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Aguardando controle...</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Left: Controller Visual -->
+    <div class="controller-card card">
+      <div class="card-title">Controle DualShock 4 <span id="controllerName"></span></div>
+      
+      <svg class="controller-svg" viewBox="0 0 400 280" xmlns="http://www.w3.org/2000/svg">
+        <!-- Body -->
+        <path d="M60 90 Q40 90 40 120 L40 180 Q40 230 90 240 L150 250 Q200 255 250 250 L310 240 Q360 230 360 180 L360 120 Q360 90 340 90 L300 85 Q200 70 100 85 Z" 
+              fill="#1e222b" stroke="#3d4452" stroke-width="2"/>
+        
+        <!-- Touchpad -->
+        <rect id="touchpad" class="touchpad" x="145" y="95" width="110" height="55" rx="6"/>
+        
+        <!-- Share / Options -->
+        <circle id="btn-share" class="btn-visual" cx="130" cy="115" r="8" data-btn="share"/>
+        <circle id="btn-options" class="btn-visual" cx="270" cy="115" r="8" data-btn="options"/>
+        
+        <!-- PS Button -->
+        <circle id="btn-ps" class="btn-visual" cx="200" cy="170" r="12" data-btn="ps"/>
+        
+        <!-- D-Pad -->
+        <rect id="btn-dpad-up" class="btn-visual" x="85" y="145" width="22" height="22" rx="3" data-btn="dpad-up"/>
+        <rect id="btn-dpad-down" class="btn-visual" x="85" y="185" width="22" height="22" rx="3" data-btn="dpad-down"/>
+        <rect id="btn-dpad-left" class="btn-visual" x="65" y="165" width="22" height="22" rx="3" data-btn="dpad-left"/>
+        <rect id="btn-dpad-right" class="btn-visual" x="105" y="165" width="22" height="22" rx="3" data-btn="dpad-right"/>
+        
+        <!-- Action Buttons -->
+        <circle id="btn-triangle" class="btn-visual" cx="310" cy="140" r="14" data-btn="triangle"/>
+        <circle id="btn-circle" class="btn-visual" cx="335" cy="165" r="14" data-btn="circle"/>
+        <circle id="btn-cross" class="btn-visual" cx="310" cy="190" r="14" data-btn="cross"/>
+        <circle id="btn-square" class="btn-visual" cx="285" cy="165" r="14" data-btn="square"/>
+        
+        <!-- Labels on buttons -->
+        <text x="310" y="144" text-anchor="middle" fill="#888" font-size="10" pointer-events="none">△</text>
+        <text x="335" y="169" text-anchor="middle" fill="#888" font-size="10" pointer-events="none">○</text>
+        <text x="310" y="194" text-anchor="middle" fill="#888" font-size="10" pointer-events="none">✕</text>
+        <text x="285" y="169" text-anchor="middle" fill="#888" font-size="10" pointer-events="none">□</text>
+        
+        <!-- Left Stick -->
+        <circle class="stick-base" cx="145" cy="210" r="32"/>
+        <circle id="stick-left" class="stick-knob" cx="145" cy="210" r="18"/>
+        <circle id="btn-l3" class="btn-visual" cx="145" cy="210" r="8" data-btn="l3" style="opacity:0.01"/>
+        
+        <!-- Right Stick -->
+        <circle class="stick-base" cx="255" cy="210" r="32"/>
+        <circle id="stick-right" class="stick-knob" cx="255" cy="210" r="18"/>
+        <circle id="btn-r3" class="btn-visual" cx="255" cy="210" r="8" data-btn="r3" style="opacity:0.01"/>
+        
+        <!-- L1 / R1 -->
+        <rect id="btn-l1" class="btn-visual" x="70" y="70" width="50" height="16" rx="4" data-btn="l1"/>
+        <rect id="btn-r1" class="btn-visual" x="280" y="70" width="50" height="16" rx="4" data-btn="r1"/>
+        
+        <!-- L2 / R2 triggers visual -->
+        <rect class="trigger-bar" x="75" y="48" width="40" height="14"/>
+        <rect id="trigger-l2" class="trigger-fill" x="75" y="48" width="40" height="0"/>
+        <rect class="trigger-bar" x="285" y="48" width="40" height="14"/>
+        <rect id="trigger-r2" class="trigger-fill" x="285" y="48" width="40" height="0"/>
+        
+        <text x="95" y="42" text-anchor="middle" fill="#666" font-size="9">L2</text>
+        <text x="305" y="42" text-anchor="middle" fill="#666" font-size="9">R2</text>
+        <text x="95" y="82" text-anchor="middle" fill="#666" font-size="9">L1</text>
+        <text x="305" y="82" text-anchor="middle" fill="#666" font-size="9">R1</text>
+      </svg>
+
+      <div class="live-values">
+        <div class="live-item">
+          <div class="label">Stick Esq (X / Y)</div>
+          <div class="value" id="liveLX">0.00 / 0.00</div>
+        </div>
+        <div class="live-item">
+          <div class="label">Stick Dir (X / Y)</div>
+          <div class="value" id="liveRX">0.00 / 0.00</div>
+        </div>
+        <div class="live-item">
+          <div class="label">L2 / R2</div>
+          <div class="value" id="liveTriggers">0% / 0%</div>
+        </div>
+        <div class="live-item">
+          <div class="label">Botões ativos</div>
+          <div class="value" id="liveButtons">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Controls -->
+    <div>
+      <div class="tabs">
+        <button class="tab active" data-tab="mapping">Mapeamento</button>
+        <button class="tab" data-tab="deadzone">Deadzones</button>
+        <button class="tab" data-tab="scripts">Scripts</button>
+        <button class="tab" data-tab="profiles">Perfis</button>
+      </div>
+
+      <!-- MAPPING TAB -->
+      <div class="tab-content active" id="tab-mapping">
+        <div class="card">
+          <div class="card-title">Mapeamento de Botões</div>
+          <div class="info-banner">
+            Clique em um botão na lista ou no visual do controle para remapeá-lo. As mudanças são aplicadas em tempo real na visualização.
+          </div>
+          <div class="mapping-list" id="mappingList"></div>
+        </div>
+      </div>
+
+      <!-- DEADZONE TAB -->
+      <div class="tab-content" id="tab-deadzone">
+        <div class="card">
+          <div class="card-title">Deadzones</div>
+          
+          <div class="form-group">
+            <div class="range-header">
+              <label>Stick Esquerdo</label>
+              <span class="range-value" id="dzLeftVal">0.08</span>
+            </div>
+            <input type="range" id="dzLeft" min="0" max="0.5" step="0.01" value="0.08">
+          </div>
+
+          <div class="form-group">
+            <div class="range-header">
+              <label>Stick Direito</label>
+              <span class="range-value" id="dzRightVal">0.08</span>
+            </div>
+            <input type="range" id="dzRight" min="0" max="0.5" step="0.01" value="0.08">
+          </div>
+
+          <div class="form-group">
+            <div class="range-header">
+              <label>Gatilho L2</label>
+              <span class="range-value" id="dzL2Val">0.05</span>
+            </div>
+            <input type="range" id="dzL2" min="0" max="0.4" step="0.01" value="0.05">
+          </div>
+
+          <div class="form-group">
+            <div class="range-header">
+              <label>Gatilho R2</label>
+              <span class="range-value" id="dzR2Val">0.05</span>
+            </div>
+            <input type="range" id="dzR2" min="0" max="0.4" step="0.01" value="0.05">
+          </div>
+
+          <div class="form-group">
+            <div class="range-header">
+              <label>Anti-Deadzone (Outer)</label>
+              <span class="range-value" id="antiDzVal">0.00</span>
+            </div>
+            <input type="range" id="antiDz" min="0" max="0.3" step="0.01" value="0">
+          </div>
+
+          <div class="info-banner" style="margin-top: 8px;">
+            Valores aplicados visualmente nos sticks acima. O anti-deadzone aumenta a sensibilidade nas bordas.
+          </div>
+        </div>
+      </div>
+
+      <!-- SCRIPTS TAB -->
+      <div class="tab-content" id="tab-scripts">
+        <div class="card">
+          <div class="card-title">Recoil Control</div>
+          
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-label">Ativar Anti-Recoil</div>
+              <div class="toggle-desc">Compensa o recuo vertical automaticamente</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="recoilEnabled">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="form-group" style="margin-top: 16px;">
+            <div class="range-header">
+              <label>Força Vertical</label>
+              <span class="range-value" id="recoilVVal">12</span>
+            </div>
+            <input type="range" id="recoilV" min="0" max="50" step="1" value="12">
+          </div>
+
+          <div class="form-group">
+            <div class="range-header">
+              <label>Força Horizontal</label>
+              <span class="range-value" id="recoilHVal">0</span>
+            </div>
+            <input type="range" id="recoilH" min="-20" max="20" step="1" value="0">
+          </div>
+
+          <div class="form-group">
+            <div class="range-header">
+              <label>Delay (ms)</label>
+              <span class="range-value" id="recoilDelayVal">8</span>
+            </div>
+            <input type="range" id="recoilDelay" min="1" max="30" step="1" value="8">
+          </div>
+
+          <div class="form-group">
+            <label>Ativar com</label>
+            <select id="recoilTrigger">
+              <option value="r2">R2 (Gatilho)</option>
+              <option value="l2">L2</option>
+              <option value="r2+l2">R2 + L2</option>
+              <option value="always">Sempre ativo</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 16px;">
+          <div class="card-title">Aim Assist</div>
+          
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-label">Ativar Aim Assist</div>
+              <div class="toggle-desc">Suaviza e auxilia a mira</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="aimEnabled">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="form-group" style="margin-top: 16px;">
+            <div class="range-header">
+              <label>Força</label>
+              <span class="range-value" id="aimStrengthVal">30</span>
+            </div>
+            <input type="range" id="aimStrength" min="0" max="100" step="1" value="30">
+          </div>
+
+          <div class="form-group">
+            <div class="range-header">
+              <label>Suavidade</label>
+              <span class="range-value" id="aimSmoothVal">40</span>
+            </div>
+            <input type="range" id="aimSmooth" min="0" max="100" step="1" value="40">
+          </div>
+
+          <div class="form-group">
+            <div class="range-header">
+              <label>Alcance (FOV)</label>
+              <span class="range-value" id="aimFovVal">15</span>
+            </div>
+            <input type="range" id="aimFov" min="5" max="40" step="1" value="15">
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 16px;">
+          <div class="card-title">Auto Ping</div>
+          
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-label">Ativar Auto Ping</div>
+              <div class="toggle-desc">Pinga automaticamente ao mirar em inimigos</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="pingEnabled">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="form-group" style="margin-top: 16px;">
+            <label>Botão de Ping</label>
+            <select id="pingButton">
+              <option value="up">D-Pad Cima</option>
+              <option value="r1">R1</option>
+              <option value="l1">L1</option>
+              <option value="touchpad">Touchpad</option>
+              <option value="options">Options</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <div class="range-header">
+              <label>Cooldown (ms)</label>
+              <span class="range-value" id="pingCooldownVal">800</span>
+            </div>
+            <input type="range" id="pingCooldown" min="200" max="2000" step="50" value="800">
+          </div>
+        </div>
+
+        <div class="info-banner" style="margin-top: 16px;">
+          ⚠️ Recoil, Aim Assist e Auto Ping são configurados aqui. Para aplicar de verdade nos jogos é necessário um programa local (companion) que cria um controle virtual. A interface já está pronta para enviar esses valores.
+        </div>
+      </div>
+
+      <!-- PROFILES TAB -->
+      <div class="tab-content" id="tab-profiles">
+        <div class="card">
+          <div class="card-title">Perfis</div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nome do perfil</label>
+              <input type="text" id="profileName" placeholder="Ex: Warzone, Apex, Fortnite...">
+            </div>
+          </div>
+
+          <div class="btn-group">
+            <button class="btn btn-primary" id="btnSaveProfile">Salvar Perfil</button>
+            <button class="btn btn-secondary" id="btnExport">Exportar JSON</button>
+            <button class="btn btn-secondary" id="btnImport">Importar</button>
+            <input type="file" id="importFile" accept=".json" style="display:none">
+          </div>
+
+          <div style="margin-top: 24px;">
+            <div class="card-title" style="margin-bottom: 12px;">Perfis salvos</div>
+            <div id="profileList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de mapeamento -->
+  <div class="modal-overlay" id="mapModal">
+    <div class="modal">
+      <h3>Remapear: <span id="modalBtnName"></span></h3>
+      <div class="form-group">
+        <label>Nova ação / tecla</label>
+        <select id="modalAction">
+          <option value="default">Padrão (sem mudança)</option>
+          <option value="disabled">Desativado</option>
+          <optgroup label="Teclado">
+            <option value="key-w">W</option>
+            <option value="key-a">A</option>
+            <option value="key-s">S</option>
+            <option value="key-d">D</option>
+            <option value="key-space">Espaço</option>
+            <option value="key-shift">Shift</option>
+            <option value="key-ctrl">Ctrl</option>
+            <option value="key-e">E</option>
+            <option value="key-r">R</option>
+            <option value="key-f">F</option>
+            <option value="key-c">C</option>
+            <option value="key-v">V</option>
+            <option value="key-q">Q</option>
+            <option value="key-tab">Tab</option>
+            <option value="key-1">1</option>
+            <option value="key-2">2</option>
+            <option value="key-3">3</option>
+            <option value="key-4">4</option>
+          </optgroup>
+          <optgroup label="Mouse">
+            <option value="mouse-left">Botão Esquerdo</option>
+            <option value="mouse-right">Botão Direito</option>
+            <option value="mouse-middle">Botão Meio</option>
+            <option value="mouse-side1">Lateral 1</option>
+            <option value="mouse-side2">Lateral 2</option>
+          </optgroup>
+          <optgroup label="Ações especiais">
+            <option value="rapid-fire">Rapid Fire</option>
+            <option value="hold-toggle">Hold → Toggle</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="modalCancel">Cancelar</button>
+        <button class="btn btn-primary" id="modalSave">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===================== STATE =====================
+    const state = {
+      connected: false,
+      gamepadIndex: null,
+      mappings: {},
+      deadzones: {
+        left: 0.08,
+        right: 0.08,
+        l2: 0.05,
+        r2: 0.05,
+        anti: 0
+      },
+      recoil: {
+        enabled: false,
+        vertical: 12,
+        horizontal: 0,
+        delay: 8,
+        trigger: 'r2'
+      },
+      aim: {
+        enabled: false,
+        strength: 30,
+        smooth: 40,
+        fov: 15
+      },
+      ping: {
+        enabled: false,
+        button: 'up',
+        cooldown: 800
+      },
+      profiles: JSON.parse(localStorage.getItem('ds4_profiles') || '{}'),
+      currentProfile: null,
+      mappingTarget: null
+    };
+
+    // Button definitions (standard DS4 / Gamepad API mapping)
+    const BUTTONS = [
+      { id: 'cross', name: '✕ Cross (X)', index: 0 },
+      { id: 'circle', name: '○ Circle', index: 1 },
+      { id: 'square', name: '□ Square', index: 2 },
+      { id: 'triangle', name: '△ Triangle', index: 3 },
+      { id: 'l1', name: 'L1', index: 4 },
+      { id: 'r1', name: 'R1', index: 5 },
+      { id: 'l2', name: 'L2', index: 6 },
+      { id: 'r2', name: 'R2', index: 7 },
+      { id: 'share', name: 'Share', index: 8 },
+      { id: 'options', name: 'Options', index: 9 },
+      { id: 'l3', name: 'L3 (Stick Esq)', index: 10 },
+      { id: 'r3', name: 'R3 (Stick Dir)', index: 11 },
+      { id: 'ps', name: 'PS Button', index: 12 },
+      { id: 'touchpad', name: 'Touchpad', index: 13 },
+      { id: 'dpad-up', name: 'D-Pad Cima', index: 12 }, // some browsers differ
+      { id: 'dpad-down', name: 'D-Pad Baixo', index: 13 },
+      { id: 'dpad-left', name: 'D-Pad Esq', index: 14 },
+      { id: 'dpad-right', name: 'D-Pad Dir', index: 15 }
+    ];
+
+    // Better standard mapping for Chrome
+    const BTN_MAP = {
+      0: 'cross', 1: 'circle', 2: 'square', 3: 'triangle',
+      4: 'l1', 5: 'r1', 6: 'l2', 7: 'r2',
+      8: 'share', 9: 'options', 10: 'l3', 11: 'r3',
+      12: 'dpad-up', 13: 'dpad-down', 14: 'dpad-left', 15: 'dpad-right',
+      16: 'ps', 17: 'touchpad'
+    };
+
+    // ===================== UI HELPERS =====================
+    function $(sel) { return document.querySelector(sel); }
+    function $$(sel) { return document.querySelectorAll(sel); }
+
+    function applyDeadzone(value, dz) {
+      if (Math.abs(value) < dz) return 0;
+      const sign = Math.sign(value);
+      const scaled = (Math.abs(value) - dz) / (1 - dz);
+      return sign * Math.min(1, scaled);
+    }
+
+    function updateRangeDisplays() {
+      $('#dzLeftVal').textContent = state.deadzones.left.toFixed(2);
+      $('#dzRightVal').textContent = state.deadzones.right.toFixed(2);
+      $('#dzL2Val').textContent = state.deadzones.l2.toFixed(2);
+      $('#dzR2Val').textContent = state.deadzones.r2.toFixed(2);
+      $('#antiDzVal').textContent = state.deadzones.anti.toFixed(2);
+
+      $('#recoilVVal').textContent = state.recoil.vertical;
+      $('#recoilHVal').textContent = state.recoil.horizontal;
+      $('#recoilDelayVal').textContent = state.recoil.delay;
+
+      $('#aimStrengthVal').textContent = state.aim.strength;
+      $('#aimSmoothVal').textContent = state.aim.smooth;
+      $('#aimFovVal').textContent = state.aim.fov;
+
+      $('#pingCooldownVal').textContent = state.ping.cooldown;
+    }
+
+    // ===================== MAPPING LIST =====================
+    function renderMappingList() {
+      const list = $('#mappingList');
+      list.innerHTML = '';
+
+      const displayButtons = [
+        { id: 'cross', name: '✕ Cross' },
+        { id: 'circle', name: '○ Circle' },
+        { id: 'square', name: '□ Square' },
+        { id: 'triangle', name: '△ Triangle' },
+        { id: 'l1', name: 'L1' },
+        { id: 'r1', name: 'R1' },
+        { id: 'l2', name: 'L2' },
+        { id: 'r2', name: 'R2' },
+        { id: 'l3', name: 'L3' },
+        { id: 'r3', name: 'R3' },
+        { id: 'share', name: 'Share' },
+        { id: 'options', name: 'Options' },
+        { id: 'ps', name: 'PS' },
+        { id: 'touchpad', name: 'Touchpad' },
+        { id: 'dpad-up', name: 'D-Pad ↑' },
+        { id: 'dpad-down', name: 'D-Pad ↓' },
+        { id: 'dpad-left', name: 'D-Pad ←' },
+        { id: 'dpad-right', name: 'D-Pad →' }
+      ];
+
+      displayButtons.forEach(btn => {
+        const mapped = state.mappings[btn.id] || 'default';
+        const label = mapped === 'default' ? 'Padrão' : 
+                      mapped === 'disabled' ? 'Desativado' :
+                      mapped.replace('key-', '').replace('mouse-', 'Mouse ').toUpperCase();
+
+        const item = document.createElement('div');
+        item.className = 'mapping-item';
+        item.innerHTML = `
+          <span class="btn-name">${btn.name}</span>
+          <span class="btn-action">${label}</span>
+        `;
+        item.addEventListener('click', () => openMapModal(btn.id, btn.name));
+        list.appendChild(item);
+
+        // Mark on SVG
+        const svgBtn = document.getElementById('btn-' + btn.id);
+        if (svgBtn) {
+          if (mapped !== 'default') svgBtn.classList.add('mapped');
+          else svgBtn.classList.remove('mapped');
+        }
+      });
+    }
+
+    function openMapModal(id, name) {
+      state.mappingTarget = id;
+      $('#modalBtnName').textContent = name;
+      $('#modalAction').value = state.mappings[id] || 'default';
+      $('#mapModal').classList.add('open');
+    }
+
+    // ===================== PROFILES =====================
+    function saveCurrentToProfile(name) {
+      state.profiles[name] = {
+        mappings: { ...state.mappings },
+        deadzones: { ...state.deadzones },
+        recoil: { ...state.recoil },
+        aim: { ...state.aim },
+        ping: { ...state.ping },
+        savedAt: new Date().toISOString()
+      };
+      localStorage.setItem('ds4_profiles', JSON.stringify(state.profiles));
+      renderProfiles();
+    }
+
+    function loadProfile(name) {
+      const p = state.profiles[name];
+      if (!p) return;
+      state.mappings = { ...p.mappings };
+      state.deadzones = { ...p.deadzones };
+      state.recoil = { ...p.recoil };
+      state.aim = { ...p.aim };
+      state.ping = { ...p.ping };
+      state.currentProfile = name;
+
+      // Sync UI
+      $('#dzLeft').value = state.deadzones.left;
+      $('#dzRight').value = state.deadzones.right;
+      $('#dzL2').value = state.deadzones.l2;
+      $('#dzR2').value = state.deadzones.r2;
+      $('#antiDz').value = state.deadzones.anti;
+
+      $('#recoilEnabled').checked = state.recoil.enabled;
+      $('#recoilV').value = state.recoil.vertical;
+      $('#recoilH').value = state.recoil.horizontal;
+      $('#recoilDelay').value = state.recoil.delay;
+      $('#recoilTrigger').value = state.recoil.trigger;
+
+      $('#aimEnabled').checked = state.aim.enabled;
+      $('#aimStrength').value = state.aim.strength;
+      $('#aimSmooth').value = state.aim.smooth;
+      $('#aimFov').value = state.aim.fov;
+
+      $('#pingEnabled').checked = state.ping.enabled;
+      $('#pingButton').value = state.ping.button;
+      $('#pingCooldown').value = state.ping.cooldown;
+
+      updateRangeDisplays();
+      renderMappingList();
+      renderProfiles();
+    }
+
+    function renderProfiles() {
+      const list = $('#profileList');
+      list.innerHTML = '';
+      const names = Object.keys(state.profiles);
+      if (names.length === 0) {
+        list.innerHTML = '<div style="color:var(--text-muted);font-size:0.9rem;">Nenhum perfil salvo ainda.</div>';
+        return;
+      }
+      names.forEach(name => {
+        const item = document.createElement('div');
+        item.className = 'profile-item' + (state.currentProfile === name ? ' active' : '');
+        item.innerHTML = `
+          <span class="profile-name">${name}</span>
+          <div class="profile-actions">
+            <button class="icon-btn" title="Carregar" data-load="${name}">📥</button>
+            <button class="icon-btn" title="Excluir" data-del="${name}">🗑️</button>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+
+      list.querySelectorAll('[data-load]').forEach(btn => {
+        btn.addEventListener('click', () => loadProfile(btn.dataset.load));
+      });
+      list.querySelectorAll('[data-del]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (confirm(`Excluir perfil "${btn.dataset.del}"?`)) {
+            delete state.profiles[btn.dataset.del];
+            localStorage.setItem('ds4_profiles', JSON.stringify(state.profiles));
+            if (state.currentProfile === btn.dataset.del) state.currentProfile = null;
+            renderProfiles();
+          }
+        });
+      });
+    }
+
+    // ===================== GAMEPAD LOOP =====================
+    function updateGamepad() {
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      let gp = null;
+
+      if (state.gamepadIndex !== null) {
+        gp = gamepads[state.gamepadIndex];
+      } else {
+        for (let i = 0; i < gamepads.length; i++) {
+          if (gamepads[i]) {
+            gp = gamepads[i];
+            state.gamepadIndex = i;
+            break;
+          }
+        }
+      }
+
+      if (gp) {
+        if (!state.connected) {
+          state.connected = true;
+          $('#statusDot').classList.add('connected');
+          $('#statusText').textContent = 'Conectado';
+          $('#controllerName').textContent = '— ' + (gp.id || 'DualShock 4');
+        }
+
+        // Axes
+        let lx = gp.axes[0] || 0;
+        let ly = gp.axes[1] || 0;
+        let rx = gp.axes[2] || 0;
+        let ry = gp.axes[3] || 0;
+
+        // Apply deadzone
+        lx = applyDeadzone(lx, state.deadzones.left);
+        ly = applyDeadzone(ly, state.deadzones.left);
+        rx = applyDeadzone(rx, state.deadzones.right);
+        ry = applyDeadzone(ry, state.deadzones.right);
+
+        // Visual sticks
+        const stickL = $('#stick-left');
+        const stickR = $('#stick-right');
+        stickL.setAttribute('cx', 145 + lx * 22);
+        stickL.setAttribute('cy', 210 + ly * 22);
+        stickR.setAttribute('cx', 255 + rx * 22);
+        stickR.setAttribute('cy', 210 + ry * 22);
+
+        $('#liveLX').textContent = `${lx.toFixed(2)} / ${ly.toFixed(2)}`;
+        $('#liveRX').textContent = `${rx.toFixed(2)} / ${ry.toFixed(2)}`;
+
+        // Triggers
+        const l2 = gp.buttons[6] ? gp.buttons[6].value : 0;
+        const r2 = gp.buttons[7] ? gp.buttons[7].value : 0;
+        const l2dz = l2 < state.deadzones.l2 ? 0 : (l2 - state.deadzones.l2) / (1 - state.deadzones.l2);
+        const r2dz = r2 < state.deadzones.r2 ? 0 : (r2 - state.deadzones.r2) / (1 - state.deadzones.r2);
+
+        $('#trigger-l2').setAttribute('height', l2dz * 14);
+        $('#trigger-l2').setAttribute('y', 48 + (14 - l2dz * 14));
+        $('#trigger-r2').setAttribute('height', r2dz * 14);
+        $('#trigger-r2').setAttribute('y', 48 + (14 - r2dz * 14));
+
+        $('#liveTriggers').textContent = `${Math.round(l2dz*100)}% / ${Math.round(r2dz*100)}%`;
+
+        // Buttons highlight
+        const active = [];
+        for (let i = 0; i < gp.buttons.length; i++) {
+          const pressed = gp.buttons[i].pressed || gp.buttons[i].value > 0.5;
+          const btnId = BTN_MAP[i];
+          if (btnId) {
+            const el = document.getElementById('btn-' + btnId);
+            if (el) {
+              if (pressed) {
+                el.classList.add('active');
+                active.push(btnId);
+              } else {
+                el.classList.remove('active');
+              }
+            }
+          }
+        }
+
+        // Touchpad special
+        if (gp.buttons[17] && gp.buttons[17].pressed) {
+          $('#touchpad').classList.add('active');
+        } else {
+          $('#touchpad').classList.remove('active');
+        }
+
+        $('#liveButtons').textContent = active.length ? active.join(', ') : '—';
+
+      } else {
+        if (state.connected) {
+          state.connected = false;
+          state.gamepadIndex = null;
+          $('#statusDot').classList.remove('connected');
+          $('#statusText').textContent = 'Desconectado';
+          $('#controllerName').textContent = '';
+        }
+      }
+
+      requestAnimationFrame(updateGamepad);
+    }
+
+    // ===================== EVENTS =====================
+    // Tabs
+    $$('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        $$('.tab').forEach(t => t.classList.remove('active'));
+        $$('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        $('#tab-' + tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Deadzone sliders
+    ['dzLeft','dzRight','dzL2','dzR2','antiDz'].forEach(id => {
+      $(`#${id}`).addEventListener('input', e => {
+        const key = id.replace('dz', '').toLowerCase();
+        if (id === 'antiDz') state.deadzones.anti = +e.target.value;
+        else if (id === 'dzLeft') state.deadzones.left = +e.target.value;
+        else if (id === 'dzRight') state.deadzones.right = +e.target.value;
+        else if (id === 'dzL2') state.deadzones.l2 = +e.target.value;
+        else if (id === 'dzR2') state.deadzones.r2 = +e.target.value;
+        updateRangeDisplays();
+      });
+    });
+
+    // Recoil
+    $('#recoilEnabled').addEventListener('change', e => state.recoil.enabled = e.target.checked);
+    $('#recoilV').addEventListener('input', e => { state.recoil.vertical = +e.target.value; updateRangeDisplays(); });
+    $('#recoilH').addEventListener('input', e => { state.recoil.horizontal = +e.target.value; updateRangeDisplays(); });
+    $('#recoilDelay').addEventListener('input', e => { state.recoil.delay = +e.target.value; updateRangeDisplays(); });
+    $('#recoilTrigger').addEventListener('change', e => state.recoil.trigger = e.target.value);
+
+    // Aim
+    $('#aimEnabled').addEventListener('change', e => state.aim.enabled = e.target.checked);
+    $('#aimStrength').addEventListener('input', e => { state.aim.strength = +e.target.value; updateRangeDisplays(); });
+    $('#aimSmooth').addEventListener('input', e => { state.aim.smooth = +e.target.value; updateRangeDisplays(); });
+    $('#aimFov').addEventListener('input', e => { state.aim.fov = +e.target.value; updateRangeDisplays(); });
+
+    // Ping
+    $('#pingEnabled').addEventListener('change', e => state.ping.enabled = e.target.checked);
+    $('#pingButton').addEventListener('change', e => state.ping.button = e.target.value);
+    $('#pingCooldown').addEventListener('input', e => { state.ping.cooldown = +e.target.value; updateRangeDisplays(); });
+
+    // Modal
+    $('#modalCancel').addEventListener('click', () => $('#mapModal').classList.remove('open'));
+    $('#modalSave').addEventListener('click', () => {
+      if (state.mappingTarget) {
+        const val = $('#modalAction').value;
+        if (val === 'default') delete state.mappings[state.mappingTarget];
+        else state.mappings[state.mappingTarget] = val;
+        renderMappingList();
+      }
+      $('#mapModal').classList.remove('open');
+    });
+    $('#mapModal').addEventListener('click', e => {
+      if (e.target === $('#mapModal')) $('#mapModal').classList.remove('open');
+    });
+
+    // SVG button clicks
+    $$('.btn-visual').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = el.dataset.btn;
+        if (id) {
+          const names = {
+            cross: '✕ Cross', circle: '○ Circle', square: '□ Square', triangle: '△ Triangle',
+            l1: 'L1', r1: 'R1', l2: 'L2', r2: 'R2', l3: 'L3', r3: 'R3',
+            share: 'Share', options: 'Options', ps: 'PS', touchpad: 'Touchpad',
+            'dpad-up': 'D-Pad ↑', 'dpad-down': 'D-Pad ↓', 'dpad-left': 'D-Pad ←', 'dpad-right': 'D-Pad →'
+          };
+          openMapModal(id, names[id] || id);
+        }
+      });
+    });
+
+    // Profiles
+    $('#btnSaveProfile').addEventListener('click', () => {
+      const name = $('#profileName').value.trim();
+      if (!name) return alert('Digite um nome para o perfil');
+      saveCurrentToProfile(name);
+      $('#profileName').value = '';
+      alert('Perfil salvo!');
+    });
+
+    $('#btnExport').addEventListener('click', () => {
+      const data = {
+        mappings: state.mappings,
+        deadzones: state.deadzones,
+        recoil: state.recoil,
+        aim: state.aim,
+        ping: state.ping
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'ds4-profile.json';
+      a.click();
+    });
+
+    $('#btnImport').addEventListener('click', () => $('#importFile').click());
+    $('#importFile').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if (data.mappings) state.mappings = data.mappings;
+          if (data.deadzones) state.deadzones = data.deadzones;
+          if (data.recoil) state.recoil = data.recoil;
+          if (data.aim) state.aim = data.aim;
+          if (data.ping) state.ping = data.ping;
+          // sync UI
+          $('#dzLeft').value = state.deadzones.left;
+          $('#dzRight').value = state.deadzones.right;
+          $('#dzL2').value = state.deadzones.l2;
+          $('#dzR2').value = state.deadzones.r2;
+          $('#antiDz').value = state.deadzones.anti;
+          $('#recoilEnabled').checked = state.recoil.enabled;
+          $('#recoilV').value = state.recoil.vertical;
+          $('#recoilH').value = state.recoil.horizontal;
+          $('#recoilDelay').value = state.recoil.delay;
+          $('#recoilTrigger').value = state.recoil.trigger;
+          $('#aimEnabled').checked = state.aim.enabled;
+          $('#aimStrength').value = state.aim.strength;
+          $('#aimSmooth').value = state.aim.smooth;
+          $('#aimFov').value = state.aim.fov;
+          $('#pingEnabled').checked = state.ping.enabled;
+          $('#pingButton').value = state.ping.button;
+          $('#pingCooldown').value = state.ping.cooldown;
+          updateRangeDisplays();
+          renderMappingList();
+          alert('Perfil importado com sucesso!');
+        } catch (err) {
+          alert('Erro ao importar arquivo');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    // Connection events
+    window.addEventListener('gamepadconnected', e => {
+      state.gamepadIndex = e.gamepad.index;
+      state.connected = true;
+      $('#statusDot').classList.add('connected');
+      $('#statusText').textContent = 'Conectado';
+      $('#controllerName').textContent = '— ' + e.gamepad.id;
+    });
+
+    window.addEventListener('gamepaddisconnected', e => {
+      if (state.gamepadIndex === e.gamepad.index) {
+        state.connected = false;
+        state.gamepadIndex = null;
+        $('#statusDot').classList.remove('connected');
+        $('#statusText').textContent = 'Desconectado';
+        $('#controllerName').textContent = '';
+      }
+    });
+
+    // Init
+    renderMappingList();
+    renderProfiles();
+    updateRangeDisplays();
+    updateGamepad();
+  </script>
+</body>
+</html>
