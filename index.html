@@ -947,6 +947,14 @@
             <option value="key-2">2</option>
             <option value="key-3">3</option>
             <option value="key-4">4</option>
+            <option value="key-alt">Alt</option>
+            <option value="key-g">G</option>
+            <option value="key-m">M</option>
+            <option value="key-esc">Esc</option>
+            <option value="key-up">Seta ↑</option>
+            <option value="key-down">Seta ↓</option>
+            <option value="key-left">Seta ←</option>
+            <option value="key-right">Seta →</option>
           </optgroup>
           <optgroup label="Mouse">
             <option value="mouse-left">Botão Esquerdo</option>
@@ -954,6 +962,7 @@
             <option value="mouse-middle">Botão Meio</option>
             <option value="mouse-side1">Lateral 1</option>
             <option value="mouse-side2">Lateral 2</option>
+            <option value="wheel-down">Roda p/ baixo</option>
           </optgroup>
           <optgroup label="Ações especiais">
             <option value="rapid-fire">Rapid Fire</option>
@@ -1094,7 +1103,7 @@
         const mapped = state.mappings[btn.id] || 'default';
         const label = mapped === 'default' ? 'Padrão' : 
                       mapped === 'disabled' ? 'Desativado' :
-                      mapped.replace('key-', '').replace('mouse-', 'Mouse ').toUpperCase();
+                      mapped.replace('key-', '').replace('mouse-', 'Mouse ').replace('wheel-down','Roda ↓').toUpperCase();
 
         const item = document.createElement('div');
         item.className = 'mapping-item';
